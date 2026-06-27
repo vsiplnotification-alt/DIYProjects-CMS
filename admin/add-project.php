@@ -26,13 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if (mysqli_query($conn, $query)) {
             $success = "Project added successfully! Redirecting...";
-            // Log the success
             error_log("Project added: " . $title);
-            // Redirect after 2 seconds
             echo "<meta http-equiv='refresh' content='2;url=dashboard.php'>";
         } else {
             $error = "Database Error: " . mysqli_error($conn);
-            // Log the error
             error_log("Failed to add project: " . mysqli_error($conn));
         }
     }
@@ -46,13 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Add Project - DIY Projects Admin</title>
     <link rel="stylesheet" href="../css/style.css">
     <script src="https://cdn.tiny.cloud/1/3s8ds16bkex7ubijt7ft5cgmmqhyx9yrem5622ytzvxiqlzb/tinymce/7/tinymce.min.js"></script>
-    <script>
-        tinymce.init({
-            selector: '#content',
-            plugins: 'lists link image',
-            toolbar: 'formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image'
-        });
-    </script>
     <style>
         .form-container {
             max-width: 800px;
@@ -111,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" class="admin-form" id="projectForm">
+                <form method="POST" class="admin-form" id="projectForm" onsubmit="return submitForm(event)">
                     <div class="form-group">
                         <label for="title">Project Title *</label>
                         <input type="text" id="title" name="title" required placeholder="Enter project title">
@@ -130,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     <div class="form-group">
                         <label for="content">Tutorial Content *</label>
-                        <textarea id="content" name="content" required placeholder="Enter tutorial content here..."></textarea>
+                        <textarea id="content" name="content"></textarea>
                     </div>
 
                     <div class="form-actions">
@@ -153,26 +143,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </section>
 
     <script>
-        document.getElementById('submitBtn').addEventListener('click', function(e) {
+        // Initialize TinyMCE
+        tinymce.init({
+            selector: '#content',
+            plugins: 'lists link image',
+            toolbar: 'formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image',
+            height: 300,
+            required: true,
+            setup: function(editor) {
+                editor.on('change', function() {
+                    editor.save();
+                });
+            }
+        });
+
+        // Form submission handler
+        function submitForm(e) {
             const title = document.getElementById('title').value.trim();
             const description = document.getElementById('description').value.trim();
             const image_url = document.getElementById('image_url').value.trim();
-            const content = tinymce.get('content') ? tinymce.get('content').getContent() : document.getElementById('content').value.trim();
             
-            console.log('Form validation check:');
-            console.log('Title:', title ? '✓ Filled' : '✗ Empty');
-            console.log('Description:', description ? '✓ Filled' : '✗ Empty');
-            console.log('Image URL:', image_url ? '✓ Filled' : '✗ Empty');
-            console.log('Content:', content ? '✓ Filled' : '✗ Empty');
+            // Get content from TinyMCE
+            const content = tinymce.get('content') ? tinymce.get('content').getContent() : '';
+            
+            console.log('Form submission check:');
+            console.log('Title:', title ? '✓' : '✗');
+            console.log('Description:', description ? '✓' : '✗');
+            console.log('Image URL:', image_url ? '✓' : '✗');
+            console.log('Content:', content ? '✓' : '✗');
             
             if (!title || !description || !image_url || !content) {
                 e.preventDefault();
-                alert('Please fill in all required fields!');
+                alert('Please fill in all required fields, including tutorial content!');
                 return false;
             }
             
-            console.log('✓ All fields valid - Submitting form...');
-        });
+            console.log('✓ All fields valid - Form submitted!');
+            return true;
+        }
     </script>
 </body>
 </html>
