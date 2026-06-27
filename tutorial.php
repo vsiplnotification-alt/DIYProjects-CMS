@@ -73,45 +73,60 @@ $project = mysqli_fetch_assoc($result);
             <span class="close" onclick="closeCertificateForm()">&times;</span>
             <h2>📋 Certificate Registration</h2>
             
-            <form id="certificateForm" class="certificate-form">
-                <input type="hidden" name="project_id" value="<?php echo $project_id; ?>">
+            <div id="step1" class="certificate-step">
+                <form id="certificateForm" class="certificate-form">
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" required placeholder="Your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" required placeholder="your@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contact">Contact Number *</label>
+                        <input type="tel" id="contact" name="contact" required placeholder="10-digit mobile number">
+                    </div>
+
+                    <div class="certificate-details">
+                        <p><strong>Certificate Fee:</strong> ₹200</p>
+                        <p><small>Click "Next" to proceed to payment</small></p>
+                    </div>
+
+                    <button type="button" class="btn btn-primary" onclick="goToPayment()">
+                        ➜ Next (Proceed to Payment)
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCertificateForm()">Cancel</button>
+                </form>
+            </div>
+
+            <!-- Payment Step -->
+            <div id="step2" class="certificate-step" style="display: none;">
+                <h3>💳 Complete Your Payment</h3>
+                <p style="text-align: center; margin-bottom: 1.5rem;">
+                    <strong>Recipient:</strong> <span id="displayName"></span><br>
+                    <strong>Email:</strong> <span id="displayEmail"></span><br>
+                    <strong>Amount:</strong> ₹200
+                </p>
                 
-                <div class="form-group">
-                    <label for="name">Full Name *</label>
-                    <input type="text" id="name" name="name" required placeholder="Your full name">
+                <div style="text-align: center; margin: 1.5rem 0;">
+                    <form>
+                        <input type="hidden" id="paymentName" name="name" value="">
+                        <input type="hidden" id="paymentEmail" name="email" value="">
+                        <input type="hidden" id="paymentContact" name="contact" value="">
+                        <input type="hidden" name="project_id" value="<?php echo $project_id; ?>">
+                        <script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_T6e5T6MXTuxZ8Z" async> </script> 
+                    </form>
                 </div>
 
-                <div class="form-group">
-                    <label for="email">Email Address *</label>
-                    <input type="email" id="email" name="email" required placeholder="your@email.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="contact">Contact Number *</label>
-                    <input type="tel" id="contact" name="contact" required placeholder="10-digit mobile number">
-                </div>
-
-                <div class="certificate-details">
-                    <p><strong>Certificate Fee:</strong> ₹200</p>
-                    <p><small>Click "Proceed to Payment" to continue with Razorpay payment</small></p>
-                </div>
-
-                <button type="button" class="btn btn-primary" onclick="proceedToPayment()">
-                    💳 Proceed to Payment (₹200)
+                <button type="button" class="btn btn-secondary" onclick="goBackToForm()" style="width: 100%; margin-top: 1rem;">
+                    ← Back
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="closeCertificateForm()">Cancel</button>
-            </form>
+            </div>
         </div>
     </div>
-
-    <!-- Hidden Form for Razorpay Payment Button -->
-    <form id="razorpayForm" method="POST" action="payment-success.php" style="display: none;">
-        <input type="hidden" id="hidden_project_id" name="project_id">
-        <input type="hidden" id="hidden_name" name="name">
-        <input type="hidden" id="hidden_email" name="email">
-        <input type="hidden" id="hidden_contact" name="contact">
-        <script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_T6e5T6MXTuxZ8Z" async> </script> 
-    </form>
 
     <!-- Footer -->
     <footer class="footer">
@@ -122,11 +137,20 @@ $project = mysqli_fetch_assoc($result);
 
     <script src="js/script.js"></script>
     <script>
-        function proceedToPayment() {
+        function openCertificateForm() {
+            document.getElementById('certificateModal').style.display = 'block';
+        }
+
+        function closeCertificateForm() {
+            document.getElementById('certificateModal').style.display = 'none';
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+        }
+
+        function goToPayment() {
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const contact = document.getElementById('contact').value.trim();
-            const project_id = document.querySelector('input[name="project_id"]').value;
 
             // Validation
             if (!name || !email || !contact) {
@@ -147,28 +171,21 @@ $project = mysqli_fetch_assoc($result);
                 return;
             }
 
-            // Store data in hidden form and submit to Razorpay button
-            document.getElementById('hidden_project_id').value = project_id;
-            document.getElementById('hidden_name').value = name;
-            document.getElementById('hidden_email').value = email;
-            document.getElementById('hidden_contact').value = contact;
+            // Store data and show payment form
+            document.getElementById('paymentName').value = name;
+            document.getElementById('paymentEmail').value = email;
+            document.getElementById('paymentContact').value = contact;
 
-            // Click the Razorpay payment button
-            const paymentButton = document.querySelector('[data-payment_button_id="pl_T6e5T6MXTuxZ8Z"]');
-            if (paymentButton) {
-                paymentButton.click();
-            }
+            document.getElementById('displayName').textContent = name;
+            document.getElementById('displayEmail').textContent = email;
 
-            // Alternative: Submit the form directly
-            // document.getElementById('razorpayForm').submit();
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
         }
 
-        function openCertificateForm() {
-            document.getElementById('certificateModal').style.display = 'block';
-        }
-
-        function closeCertificateForm() {
-            document.getElementById('certificateModal').style.display = 'none';
+        function goBackToForm() {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
         }
 
         // Close modal when clicking outside
@@ -176,8 +193,29 @@ $project = mysqli_fetch_assoc($result);
             const modal = document.getElementById('certificateModal');
             if (event.target == modal) {
                 modal.style.display = 'none';
+                document.getElementById('step1').style.display = 'block';
+                document.getElementById('step2').style.display = 'none';
             }
         }
     </script>
+
+    <style>
+        .certificate-step {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .certificate-details {
+            background: #f0f8ff;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            border-left: 4px solid #3498db;
+        }
+    </style>
 </body>
 </html>
