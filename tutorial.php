@@ -2,7 +2,6 @@
 // DIY Projects CMS - Tutorial Page
 session_start();
 include 'config/db.php';
-include 'config/razorpay.php';
 
 if (!isset($_GET['id'])) {
     header('Location: index.php');
@@ -19,9 +18,6 @@ if (mysqli_num_rows($result) == 0) {
 }
 
 $project = mysqli_fetch_assoc($result);
-
-// Generate unique order ID
-$order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,7 +26,6 @@ $order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($project['title']); ?> - DIY Projects</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -80,7 +75,6 @@ $order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
             
             <form id="certificateForm" class="certificate-form">
                 <input type="hidden" name="project_id" value="<?php echo $project_id; ?>">
-                <input type="hidden" name="order_id" value="<?php echo $order_id; ?>">
                 
                 <div class="form-group">
                     <label for="name">Full Name *</label>
@@ -99,16 +93,25 @@ $order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
 
                 <div class="certificate-details">
                     <p><strong>Certificate Fee:</strong> ₹200</p>
-                    <p><small>You will be redirected to Razorpay for secure payment</small></p>
+                    <p><small>Click "Proceed to Payment" to continue with Razorpay payment</small></p>
                 </div>
 
-                <button type="button" class="btn btn-primary" onclick="initiatePayment()">
+                <button type="button" class="btn btn-primary" onclick="proceedToPayment()">
                     💳 Proceed to Payment (₹200)
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="closeCertificateForm()">Cancel</button>
             </form>
         </div>
     </div>
+
+    <!-- Hidden Form for Razorpay Payment Button -->
+    <form id="razorpayForm" method="POST" action="payment-success.php" style="display: none;">
+        <input type="hidden" id="hidden_project_id" name="project_id">
+        <input type="hidden" id="hidden_name" name="name">
+        <input type="hidden" id="hidden_email" name="email">
+        <input type="hidden" id="hidden_contact" name="contact">
+        <script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_T6e5T6MXTuxZ8Z" async> </script> 
+    </form>
 
     <!-- Footer -->
     <footer class="footer">
@@ -119,13 +122,11 @@ $order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
 
     <script src="js/script.js"></script>
     <script>
-        // Razorpay Payment Integration
-        function initiatePayment() {
+        function proceedToPayment() {
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const contact = document.getElementById('contact').value.trim();
             const project_id = document.querySelector('input[name="project_id"]').value;
-            const order_id = document.querySelector('input[name="order_id"]').value;
 
             // Validation
             if (!name || !email || !contact) {
@@ -139,65 +140,27 @@ $order_id = 'ORD-' . time() . '-' . rand(1000, 9999);
                 return;
             }
 
-            // Razorpay Options
-            const options = {
-                key: '<?php echo RAZORPAY_KEY_ID; ?>',
-                amount: <?php echo CERTIFICATE_FEE; ?>,
-                currency: '<?php echo CERTIFICATE_CURRENCY; ?>',
-                name: 'DIY Projects',
-                description: '<?php echo CERTIFICATE_DESCRIPTION; ?>',
-                order_id: order_id,
-                handler: function(response) {
-                    handlePaymentSuccess(response, name, email, contact, project_id);
-                },
-                prefill: {
-                    name: name,
-                    email: email,
-                    contact: contact
-                },
-                theme: {
-                    color: '#3498db'
-                },
-                modal: {
-                    ondismiss: function() {
-                        console.log('Payment cancelled');
-                    }
-                }
-            };
+            // Validate email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Please enter a valid email address');
+                return;
+            }
 
-            const rzp = new Razorpay(options);
-            rzp.open();
-        }
+            // Store data in hidden form and submit to Razorpay button
+            document.getElementById('hidden_project_id').value = project_id;
+            document.getElementById('hidden_name').value = name;
+            document.getElementById('hidden_email').value = email;
+            document.getElementById('hidden_contact').value = contact;
 
-        function handlePaymentSuccess(response, name, email, contact, project_id) {
-            // Send payment details to backend for verification
-            const formData = new FormData();
-            formData.append('razorpay_payment_id', response.razorpay_payment_id);
-            formData.append('razorpay_order_id', response.razorpay_order_id);
-            formData.append('razorpay_signature', response.razorpay_signature);
-            formData.append('name', name);
-            formData.append('email', email);
-            formData.append('contact', contact);
-            formData.append('project_id', project_id);
+            // Click the Razorpay payment button
+            const paymentButton = document.querySelector('[data-payment_button_id="pl_T6e5T6MXTuxZ8Z"]');
+            if (paymentButton) {
+                paymentButton.click();
+            }
 
-            fetch('razorpay-handler.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    console.log('Certificate registered successfully');
-                    // Redirect to certificate download
-                    window.location.href = data.redirect;
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            });
+            // Alternative: Submit the form directly
+            // document.getElementById('razorpayForm').submit();
         }
 
         function openCertificateForm() {
