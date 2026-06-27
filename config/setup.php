@@ -16,7 +16,7 @@ $projects_sql = "CREATE TABLE IF NOT EXISTS projects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-// Create certificates table
+// Create certificates table with status column
 $certificates_sql = "CREATE TABLE IF NOT EXISTS certificates (
     id INT AUTO_INCREMENT PRIMARY KEY,
     project_id INT NOT NULL,
@@ -25,6 +25,7 @@ $certificates_sql = "CREATE TABLE IF NOT EXISTS certificates (
     email VARCHAR(255) NOT NULL,
     contact VARCHAR(20) NOT NULL,
     payment_id VARCHAR(100) NOT NULL,
+    status ENUM('pending', 'verified', 'sent') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
